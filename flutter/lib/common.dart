@@ -1574,9 +1574,23 @@ Future<void> initGlobalFFI() async {
   Get.put<FFI>(_globalFFI, permanent: true);
 }
 
+// DeskViewer：以下 fork 新增文案的中文未烤进 native 语言库（src/lang/android_viewer.rs），
+// 重建 Android 交叉编译工具链成本高，故在 Dart 层兜底。Android viewer 的 UI 恒为中文
+// （见 src/lang.rs：android 平台无条件使用 android_viewer::T），所以直接覆盖即可。
+// 注意：一旦 native 库重建并包含这些 key，删除本表与下方 isAndroid 判断即可。
+const Map<String, String> _deskViewerAndroidZh = {
+  'Auto landscape in session': '会话内自动横屏',
+  'Force landscape': '强制横屏',
+  'Follow device orientation': '跟随设备方向',
+};
+
 String translate(String name) {
   if (name.startsWith('Failed to') && name.contains(': ')) {
     return name.split(': ').map((x) => translate(x)).join(': ');
+  }
+  if (isAndroid) {
+    final zh = _deskViewerAndroidZh[name];
+    if (zh != null) return zh;
   }
   return platformFFI.translate(name, localeName);
 }
