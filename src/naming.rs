@@ -18,7 +18,7 @@ fn main() {
             api,
             relay,
         }) {
-            Ok(name) => println!("rustdesk-custom_serverd-{}.exe", name),
+            Ok(name) => println!("deskviewer-custom_serverd-{}.exe", name),
             Err(e) => println!("{:?}", e),
         }
     }
@@ -26,3 +26,4 @@ fn main() {
         println!("{:?}", get_custom_server_from_string(&args[0]));
     }
 }
+

@@ -45,6 +45,7 @@ pub struct VpxDecoder {
     ctx: vpx_codec_ctx_t,
 }
 
+#[cfg(not(target_os = "android"))]
 impl EncoderApi for VpxEncoder {
     fn new(cfg: crate::codec::EncoderCfg, i444: bool) -> ResultType<Self>
     where
@@ -230,6 +231,52 @@ impl EncoderApi for VpxEncoder {
     fn disable(&self) {}
 }
 
+#[cfg(target_os = "android")]
+impl EncoderApi for VpxEncoder {
+    fn new(_cfg: crate::codec::EncoderCfg, _i444: bool) -> ResultType<Self>
+    where
+        Self: Sized,
+    {
+        Err(anyhow!("Android viewer-only build does not support local VPX encoding"))
+    }
+
+    fn encode_to_message(&mut self, _input: EncodeInput, _ms: i64) -> ResultType<VideoFrame> {
+        Err(anyhow!("Android viewer-only build does not support local VPX encoding"))
+    }
+
+    fn yuvfmt(&self) -> crate::EncodeYuvFormat {
+        panic!("Android viewer-only build does not support local VPX encoding")
+    }
+
+    #[cfg(feature = "vram")]
+    fn input_texture(&self) -> bool {
+        false
+    }
+
+    fn set_quality(&mut self, _ratio: f32) -> ResultType<()> {
+        Err(anyhow!("Android viewer-only build does not support local VPX encoding"))
+    }
+
+    fn bitrate(&self) -> u32 {
+        0
+    }
+
+    fn support_changing_quality(&self) -> bool {
+        false
+    }
+
+    fn latency_free(&self) -> bool {
+        false
+    }
+
+    fn is_hardware(&self) -> bool {
+        false
+    }
+
+    fn disable(&self) {}
+}
+
+#[cfg(not(target_os = "android"))]
 impl VpxEncoder {
     pub fn encode<'a>(&'a mut self, pts: i64, data: &[u8], stride_align: usize) -> Result<EncodeFrames<'a>> {
         let bpp = if self.i444 { 24 } else { 12 };
@@ -448,11 +495,6 @@ impl VpxDecoder {
             VpxVideoCodecId::VP9 => call_vpx_ptr!(vpx_codec_vp9_dx()),
         };
         let mut ctx = Default::default();
-        let cfg = vpx_codec_dec_cfg_t {
-            threads: codec_thread_num(64) as _,
-            w: 0,
-            h: 0,
-        };
         /*
         unsafe {
             println!("{}", vpx_codec_get_caps(i));
@@ -461,7 +503,7 @@ impl VpxDecoder {
         call_vpx!(vpx_codec_dec_init_ver(
             &mut ctx,
             i,
-            &cfg,
+            ptr::null(),
             0,
             VPX_DECODER_ABI_VERSION as _,
         ));

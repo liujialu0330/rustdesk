@@ -39,3 +39,4 @@ Pointer<win32.OSVERSIONINFOEX> _getOSVERSIONINFOEXPointer() {
     ..wReserved = 0;
   return pointer;
 }
+

@@ -40,3 +40,4 @@ class MsgFromUi {
     return jsonEncode(toJson());
   }
 }
+

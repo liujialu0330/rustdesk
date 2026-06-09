@@ -16,3 +16,4 @@ void handlePluginEvent(
     handleMsgBox(content?['c']);
   }
 }
+

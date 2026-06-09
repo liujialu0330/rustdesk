@@ -1,4 +1,4 @@
-import 'package:flutter_hbb/common.dart';
+import 'package:deskviewer/common.dart';
 import 'package:get/get.dart';
 
 import '../consts.dart';
@@ -366,3 +366,4 @@ removeSharedStates(String id) {
   UnreadChatCountState.delete(id);
   if (isMobile) ConnectionTypeState.delete(id);
 }
+

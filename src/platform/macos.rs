@@ -1228,3 +1228,4 @@ fn get_bundle_id() -> Option<String> {
         Some(bundle_id_str)
     }
 }
+

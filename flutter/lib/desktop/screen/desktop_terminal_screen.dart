@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_hbb/common.dart';
+import 'package:deskviewer/common.dart';
 import 'package:provider/provider.dart';
 
-import 'package:flutter_hbb/desktop/pages/terminal_tab_page.dart';
+import 'package:deskviewer/desktop/pages/terminal_tab_page.dart';
 
 class DesktopTerminalScreen extends StatelessWidget {
   final Map<String, dynamic> params;
@@ -25,3 +25,4 @@ class DesktopTerminalScreen extends StatelessWidget {
     );
   }
 }
+

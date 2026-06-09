@@ -429,3 +429,4 @@ pub fn is_in_privacy_mode() -> bool {
         .map(|pm| pm.pre_conn_id() != INVALID_PRIVACY_MODE_CONN_ID)
         .unwrap_or(false)
 }
+

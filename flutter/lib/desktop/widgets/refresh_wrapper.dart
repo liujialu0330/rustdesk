@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_hbb/common.dart';
-import 'package:flutter_hbb/main.dart';
+import 'package:deskviewer/common.dart';
+import 'package:deskviewer/main.dart';
 import 'package:get/get.dart';
 
 class RefreshWrapper extends StatefulWidget {
@@ -43,3 +43,4 @@ class RefreshWrapperState extends State<RefreshWrapper> {
     el.visitChildren(_rebuildElement);
   }
 }
+

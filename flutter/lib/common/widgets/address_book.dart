@@ -4,15 +4,15 @@ import 'package:bot_toast/bot_toast.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:dynamic_layouts/dynamic_layouts.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_hbb/common/formatter/id_formatter.dart';
-import 'package:flutter_hbb/common/hbbs/hbbs.dart';
-import 'package:flutter_hbb/common/widgets/peer_card.dart';
-import 'package:flutter_hbb/common/widgets/peers_view.dart';
-import 'package:flutter_hbb/consts.dart';
-import 'package:flutter_hbb/desktop/widgets/popup_menu.dart';
-import 'package:flutter_hbb/models/ab_model.dart';
-import 'package:flutter_hbb/models/platform_model.dart';
-import 'package:flutter_hbb/models/state_model.dart';
+import 'package:deskviewer/common/formatter/id_formatter.dart';
+import 'package:deskviewer/common/hbbs/hbbs.dart';
+import 'package:deskviewer/common/widgets/peer_card.dart';
+import 'package:deskviewer/common/widgets/peers_view.dart';
+import 'package:deskviewer/consts.dart';
+import 'package:deskviewer/desktop/widgets/popup_menu.dart';
+import 'package:deskviewer/models/ab_model.dart';
+import 'package:deskviewer/models/platform_model.dart';
+import 'package:deskviewer/models/state_model.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import '../../desktop/widgets/material_mod_popup_menu.dart' as mod_menu;
 import 'package:get/get.dart';
@@ -897,3 +897,4 @@ MenuEntryButton<String> getEntry(String title, VoidCallback proc) {
     dismissOnClicked: true,
   );
 }
+

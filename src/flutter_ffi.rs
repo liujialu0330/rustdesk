@@ -36,7 +36,6 @@ pub type SessionID = uuid::Uuid;
 lazy_static::lazy_static! {
     static ref TEXTURE_RENDER_KEY: Arc<AtomicI32> = Arc::new(AtomicI32::new(0));
 }
-
 fn initialize(app_dir: &str, custom_client_config: &str) {
     flutter::async_tasks::start_flutter_async_runner();
     // `APP_DIR` is set in `main_get_data_dir_ios()` on iOS.
@@ -2850,8 +2849,8 @@ pub fn main_get_common(key: String) -> String {
                 crate::platform::windows::is_msi_installed(),
                 crate::common::is_custom_client(),
             ) {
-                (Ok(true), false) => format!("rustdesk-{_version}-x86_64.msi"),
-                (Ok(true), true) | (Ok(false), _) => format!("rustdesk-{_version}-x86_64.exe"),
+                (Ok(true), false) => format!("deskviewer-{_version}-x86_64.msi"),
+                (Ok(true), true) | (Ok(false), _) => format!("deskviewer-{_version}-x86_64.exe"),
                 (Err(e), _) => {
                     log::error!("Failed to check if is msi: {}", e);
                     format!("error:update-failed-check-msi-tip")
@@ -2860,9 +2859,9 @@ pub fn main_get_common(key: String) -> String {
             #[cfg(target_os = "macos")]
             {
                 return if cfg!(target_arch = "x86_64") {
-                    format!("rustdesk-{_version}-x86_64.dmg")
+                    format!("deskviewer-{_version}-x86_64.dmg")
                 } else if cfg!(target_arch = "aarch64") {
-                    format!("rustdesk-{_version}-aarch64.dmg")
+                    format!("deskviewer-{_version}-aarch64.dmg")
                 } else {
                     "error:unsupported".to_owned()
                 };
@@ -3037,44 +3036,11 @@ pub fn session_get_common(
 
 #[cfg(target_os = "android")]
 pub mod server_side {
-    use hbb_common::{config, log};
     use jni::{
-        errors::{Error as JniError, Result as JniResult},
-        objects::{JClass, JObject, JString},
-        sys::{jboolean, jstring},
+        objects::{JClass, JString},
+        sys::jstring,
         JNIEnv,
     };
-
-    use crate::start_server;
-
-    #[no_mangle]
-    pub unsafe extern "system" fn Java_ffi_FFI_startServer(
-        env: JNIEnv,
-        _class: JClass,
-        app_dir: JString,
-        custom_client_config: JString,
-    ) {
-        log::debug!("startServer from jvm");
-        let mut env = env;
-        if let Ok(app_dir) = env.get_string(&app_dir) {
-            *config::APP_DIR.write().unwrap() = app_dir.into();
-        }
-        if let Ok(custom_client_config) = env.get_string(&custom_client_config) {
-            if !custom_client_config.is_empty() {
-                let custom_client_config: String = custom_client_config.into();
-                crate::read_custom_client(&custom_client_config);
-            }
-        }
-        std::thread::spawn(move || start_server(true));
-    }
-
-    #[no_mangle]
-    pub unsafe extern "system" fn Java_ffi_FFI_startService(_env: JNIEnv, _class: JClass) {
-        log::debug!("startService from jvm");
-        config::Config::set_option("stop-service".into(), "".into());
-        crate::rendezvous_mediator::reset_needs_deploy_notification();
-        crate::rendezvous_mediator::RendezvousMediator::restart();
-    }
 
     #[no_mangle]
     pub unsafe extern "system" fn Java_ffi_FFI_translateLocale(
@@ -3093,50 +3059,5 @@ pub mod server_side {
             "".into()
         };
         return env.new_string(res).unwrap_or(input).into_raw();
-    }
-
-    #[no_mangle]
-    pub unsafe extern "system" fn Java_ffi_FFI_refreshScreen(_env: JNIEnv, _class: JClass) {
-        crate::server::video_service::refresh()
-    }
-
-    #[no_mangle]
-    pub unsafe extern "system" fn Java_ffi_FFI_getLocalOption(
-        env: JNIEnv,
-        _class: JClass,
-        key: JString,
-    ) -> jstring {
-        let mut env = env;
-        let res = if let Ok(key) = env.get_string(&key) {
-            let key: String = key.into();
-            super::get_local_option(key)
-        } else {
-            "".into()
-        };
-        return env.new_string(res).unwrap_or_default().into_raw();
-    }
-
-    #[no_mangle]
-    pub unsafe extern "system" fn Java_ffi_FFI_getBuildinOption(
-        env: JNIEnv,
-        _class: JClass,
-        key: JString,
-    ) -> jstring {
-        let mut env = env;
-        let res = if let Ok(key) = env.get_string(&key) {
-            let key: String = key.into();
-            super::get_builtin_option(&key)
-        } else {
-            "".into()
-        };
-        return env.new_string(res).unwrap_or_default().into_raw();
-    }
-
-    #[no_mangle]
-    pub unsafe extern "system" fn Java_ffi_FFI_isServiceClipboardEnabled(
-        env: JNIEnv,
-        _class: JClass,
-    ) -> jboolean {
-        jboolean::from(crate::server::is_clipboard_service_ok())
     }
 }

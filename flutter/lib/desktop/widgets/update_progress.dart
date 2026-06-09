@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_hbb/common.dart';
-import 'package:flutter_hbb/models/platform_model.dart';
+import 'package:deskviewer/common.dart';
+import 'package:deskviewer/models/platform_model.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -265,3 +265,4 @@ class UpdateProgressState extends State<UpdateProgress> {
     );
   }
 }
+

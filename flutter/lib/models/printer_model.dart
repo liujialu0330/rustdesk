@@ -1,6 +1,6 @@
-import 'package:flutter_hbb/common.dart';
-import 'package:flutter_hbb/consts.dart';
-import 'package:flutter_hbb/models/platform_model.dart';
+import 'package:deskviewer/common.dart';
+import 'package:deskviewer/consts.dart';
+import 'package:deskviewer/models/platform_model.dart';
 
 class PrinterOptions {
   String action;
@@ -46,3 +46,4 @@ class PrinterOptions {
         printerName: selectedPrinterName);
   }
 }
+

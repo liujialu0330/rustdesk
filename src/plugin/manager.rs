@@ -598,3 +598,4 @@ pub(super) mod install {
         send_install_status(id, InstallStatus::Finished);
     }
 }
+

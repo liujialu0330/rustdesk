@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_hbb/common.dart';
-import 'package:flutter_hbb/models/input_model.dart';
-import 'package:flutter_hbb/models/model.dart';
+import 'package:deskviewer/common.dart';
+import 'package:deskviewer/models/input_model.dart';
+import 'package:deskviewer/models/model.dart';
 import 'package:get/get.dart';
 import 'package:toggle_switch/toggle_switch.dart';
 
 class GestureIcons {
-  static const String _family = 'gestureicons';
+  static const String _family = 'GestureIcons';
 
   GestureIcons._();
 
@@ -389,3 +389,4 @@ class GestureInfo extends StatelessWidget {
         ));
   }
 }
+

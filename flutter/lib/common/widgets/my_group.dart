@@ -1,10 +1,10 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_hbb/common/hbbs/hbbs.dart';
-import 'package:flutter_hbb/common/widgets/login.dart';
-import 'package:flutter_hbb/common/widgets/peers_view.dart';
-import 'package:flutter_hbb/models/state_model.dart';
+import 'package:deskviewer/common/hbbs/hbbs.dart';
+import 'package:deskviewer/common/widgets/login.dart';
+import 'package:deskviewer/common/widgets/peers_view.dart';
+import 'package:deskviewer/models/state_model.dart';
 import 'package:get/get.dart';
 
 import '../../common.dart';
@@ -307,3 +307,4 @@ class _MyGroupState extends State<MyGroup> {
     )).marginSymmetric(horizontal: 12).marginOnly(bottom: 6);
   }
 }
+

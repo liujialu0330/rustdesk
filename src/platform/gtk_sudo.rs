@@ -771,3 +771,4 @@ fn quote_shell_arg(arg: &str, add_splash_if_match: bool) -> String {
     }
     rv
 }
+

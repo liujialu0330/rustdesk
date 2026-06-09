@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_hbb/models/model.dart';
-import 'package:flutter_hbb/common.dart';
-import 'package:flutter_hbb/common/widgets/custom_scale_base.dart';
+import 'package:deskviewer/models/model.dart';
+import 'package:deskviewer/common.dart';
+import 'package:deskviewer/common/widgets/custom_scale_base.dart';
 
 class MobileCustomScaleControls extends StatefulWidget {
   final FFI ffi;
@@ -69,3 +69,4 @@ class _MobileCustomScaleControlsState extends CustomScaleControls<MobileCustomSc
     );
   }
 }
+

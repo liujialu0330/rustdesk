@@ -38,3 +38,4 @@ impl<T: DeserializeOwned> HbbHttpResponse<T> {
         }
     }
 }
+

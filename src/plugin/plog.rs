@@ -32,3 +32,4 @@ pub(super) extern "C" fn plugin_log(level: *const c_char, msg: *const c_char) {
         }
     }
 }
+

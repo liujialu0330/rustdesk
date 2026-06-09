@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_hbb/common/formatter/id_formatter.dart';
+import 'package:deskviewer/common/formatter/id_formatter.dart';
 import '../../../models/platform_model.dart';
-import 'package:flutter_hbb/models/peer_model.dart';
-import 'package:flutter_hbb/common.dart';
-import 'package:flutter_hbb/common/widgets/peer_card.dart';
+import 'package:deskviewer/models/peer_model.dart';
+import 'package:deskviewer/common.dart';
+import 'package:deskviewer/common/widgets/peer_card.dart';
 
 class AllPeersLoader {
   List<Peer> peers = [];
@@ -255,3 +255,4 @@ class AutocompletePeerTileState extends State<AutocompletePeerTile> {
     );
   }
 }
+

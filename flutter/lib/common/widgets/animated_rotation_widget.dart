@@ -51,3 +51,4 @@ class AnimatedRotationWidgetState extends State<AnimatedRotationWidget> {
             child: widget.child));
   }
 }
+

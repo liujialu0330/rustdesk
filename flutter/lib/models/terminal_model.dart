@@ -3,9 +3,9 @@ import 'dart:convert';
 import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_hbb/common.dart';
-import 'package:flutter_hbb/consts.dart';
-import 'package:flutter_hbb/main.dart';
+import 'package:deskviewer/common.dart';
+import 'package:deskviewer/consts.dart';
+import 'package:deskviewer/main.dart';
 import 'package:xterm/xterm.dart';
 
 import 'model.dart';
@@ -45,7 +45,7 @@ class TerminalModel with ChangeNotifier {
     // - Peer Linux: canonical-mode shells accept both, but raw-mode apps
     //   (readline, prompt_toolkit, vim, TUI frameworks) expect '\r'.
     // - Peer macOS: same as Linux, raw-mode apps expect '\r'
-    //   (https://github.com/rustdesk/rustdesk/issues/14907).
+    //   (https://github.com/liujialu0330/deskviewer/issues/14907).
     // So on mobile / web-mobile, always normalize a lone '\n' to '\r'.
     // We deliberately do not touch multi-character payloads (e.g. pasted text)
     // so embedded newlines in pasted content are preserved.
@@ -495,3 +495,5 @@ class TerminalModel with ChangeNotifier {
     super.dispose();
   }
 }
+
+

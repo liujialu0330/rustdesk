@@ -97,3 +97,4 @@ pub fn set_screenshot(data: bytes::Bytes) {
 pub fn handle_screenshot(action: String) -> String {
     SCREENSHOT.lock().unwrap().handle_screenshot(action)
 }
+

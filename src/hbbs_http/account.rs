@@ -364,3 +364,4 @@ impl OidcSession {
         OIDC_SESSION.read().unwrap().get_result_()
     }
 }
+

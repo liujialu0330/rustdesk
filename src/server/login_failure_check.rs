@@ -229,3 +229,4 @@ mod tests {
         clear_os_credential_failure_state(FailureScope::TerminalOsLogin);
     }
 }
+

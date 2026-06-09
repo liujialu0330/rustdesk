@@ -486,3 +486,4 @@ pub fn try_get_displays_(add_amyuni_headless: bool) -> ResultType<Vec<Display>> 
     }
     Ok(displays)
 }
+

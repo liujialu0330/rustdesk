@@ -1,3 +1,9 @@
+use std::{
+    fs::File,
+    io::{BufRead, BufReader, Write},
+    path::Path,
+};
+
 #[cfg(windows)]
 fn build_windows() {
     let file = "src/platform/windows.cc";
@@ -77,14 +83,47 @@ fn install_android_deps() {
     println!("cargo:rustc-link-lib=OpenSLES");
 }
 
+fn gen_version() {
+    println!("cargo:rerun-if-changed=Cargo.toml");
+    let mut file = File::create("./src/version.rs").unwrap();
+    if let Ok(lines) = read_lines("Cargo.toml") {
+        for line in lines.flatten() {
+            let ab: Vec<&str> = line.split('=').map(|x| x.trim()).collect();
+            if ab.len() == 2 && ab[0] == "version" {
+                file.write_all(format!("pub const VERSION: &str = {};\n", ab[1]).as_bytes())
+                    .ok();
+                break;
+            }
+        }
+    }
+    let build_date = format!("{}", chrono::Local::now().format("%Y-%m-%d %H:%M"));
+    file.write_all(
+        format!("#[allow(dead_code)]\npub const BUILD_DATE: &str = \"{build_date}\";\n").as_bytes(),
+    )
+    .ok();
+    file.sync_all().ok();
+}
+
+fn read_lines<P>(filename: P) -> std::io::Result<std::io::Lines<BufReader<File>>>
+where
+    P: AsRef<Path>,
+{
+    let file = File::open(filename)?;
+    Ok(BufReader::new(file).lines())
+}
+
 fn main() {
-    hbb_common::gen_version();
+    gen_version();
     install_android_deps();
-    #[cfg(all(windows, feature = "inline"))]
-    build_manifest();
-    #[cfg(windows)]
-    build_windows();
     let target_os = std::env::var("CARGO_CFG_TARGET_OS").unwrap();
+    #[cfg(all(windows, feature = "inline"))]
+    if target_os == "windows" {
+        build_manifest();
+    }
+    #[cfg(windows)]
+    if target_os == "windows" {
+        build_windows();
+    }
     if target_os == "macos" {
         #[cfg(target_os = "macos")]
         build_mac();

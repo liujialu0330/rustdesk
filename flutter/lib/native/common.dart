@@ -15,3 +15,4 @@ String get screenInfo_ => '';
 final isWebOnWindows_ = false;
 final isWebOnLinux_ = false;
 final isWebOnMacOS_ = false;
+

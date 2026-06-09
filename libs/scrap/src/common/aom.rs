@@ -58,6 +58,7 @@ pub struct AomEncoder {
 }
 
 // https://webrtc.googlesource.com/src/+/refs/heads/main/modules/video_coding/codecs/av1/libaom_av1_encoder.cc
+#[cfg(not(target_os = "android"))]
 mod webrtc {
     use super::*;
 
@@ -199,6 +200,7 @@ mod webrtc {
     }
 }
 
+#[cfg(not(target_os = "android"))]
 impl EncoderApi for AomEncoder {
     fn new(cfg: crate::codec::EncoderCfg, i444: bool) -> ResultType<Self>
     where
@@ -286,6 +288,52 @@ impl EncoderApi for AomEncoder {
     fn disable(&self) {}
 }
 
+#[cfg(target_os = "android")]
+impl EncoderApi for AomEncoder {
+    fn new(_cfg: crate::codec::EncoderCfg, _i444: bool) -> ResultType<Self>
+    where
+        Self: Sized,
+    {
+        Err(anyhow!("Android viewer-only build does not support local AV1 encoding"))
+    }
+
+    fn encode_to_message(&mut self, _input: EncodeInput, _ms: i64) -> ResultType<VideoFrame> {
+        Err(anyhow!("Android viewer-only build does not support local AV1 encoding"))
+    }
+
+    fn yuvfmt(&self) -> crate::EncodeYuvFormat {
+        panic!("Android viewer-only build does not support local AV1 encoding")
+    }
+
+    #[cfg(feature = "vram")]
+    fn input_texture(&self) -> bool {
+        false
+    }
+
+    fn set_quality(&mut self, _ratio: f32) -> ResultType<()> {
+        Err(anyhow!("Android viewer-only build does not support local AV1 encoding"))
+    }
+
+    fn bitrate(&self) -> u32 {
+        0
+    }
+
+    fn support_changing_quality(&self) -> bool {
+        false
+    }
+
+    fn latency_free(&self) -> bool {
+        false
+    }
+
+    fn is_hardware(&self) -> bool {
+        false
+    }
+
+    fn disable(&self) {}
+}
+
+#[cfg(not(target_os = "android"))]
 impl AomEncoder {
     pub fn encode<'a>(&'a mut self, ms: i64, data: &[u8], stride_align: usize) -> Result<EncodeFrames<'a>> {
         let bpp = if self.i444 { 24 } else { 12 };
@@ -445,16 +493,10 @@ impl AomDecoder {
     pub fn new() -> Result<Self> {
         let i = call_aom_ptr!(aom_codec_av1_dx());
         let mut ctx = Default::default();
-        let cfg = aom_codec_dec_cfg_t {
-            threads: codec_thread_num(64) as _,
-            w: 0,
-            h: 0,
-            allow_lowbitdepth: 1,
-        };
         call_aom!(aom_codec_dec_init_ver(
             &mut ctx,
             i,
-            &cfg,
+            ptr::null(),
             0,
             AOM_DECODER_ABI_VERSION as _,
         ));

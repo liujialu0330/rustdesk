@@ -307,3 +307,4 @@ pub fn cancel(id: &str) {
 pub fn remove(id: &str) {
     let _ = DOWNLOADERS.lock().unwrap().remove(id);
 }
+

@@ -12,3 +12,4 @@ Future<void> webSendLocalFiles(
     required bool isRemote}) {
   throw UnimplementedError("webSendLocalFiles");
 }
+

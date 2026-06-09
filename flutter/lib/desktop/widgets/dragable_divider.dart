@@ -50,3 +50,4 @@ class _DraggableDividerState extends State<DraggableDivider> {
     );
   }
 }
+

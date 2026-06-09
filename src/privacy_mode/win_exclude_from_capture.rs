@@ -9,3 +9,4 @@ pub(super) fn is_supported() -> bool {
     // https://en.wikipedia.org/wiki/Windows_10_version_history
     is_windows_version_or_greater(10, 0, 19041, 0, 0)
 }
+

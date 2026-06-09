@@ -5,7 +5,7 @@ pub const ERR_SUCCESS: i32 = 0;
 // ======================================================
 // Errors from the plugins, must be handled by RustDesk
 
-pub const ERR_RUSTDESK_HANDLE_BASE: i32 = 10000;
+pub const ERR_DESKVIEWER_HANDLE_BASE: i32 = 10000;
 
 // not loaded
 pub const ERR_PLUGIN_LOAD: i32 = 10001;
@@ -48,3 +48,4 @@ pub const ERR_PLUGIN_HANDLE_BASE: i32 = 30000;
 pub const EER_CALL_FAILED: i32 = 30021;
 pub const ERR_PEER_ON_FAILED: i32 = 40012;
 pub const ERR_PEER_OFF_FAILED: i32 = 40012;
+

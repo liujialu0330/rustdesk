@@ -25,3 +25,4 @@ macro_rules! define_method_prefix {
         }
     };
 }
+

@@ -306,3 +306,4 @@ pub fn common_get_error() -> String {
     }
     return "".to_owned();
 }
+

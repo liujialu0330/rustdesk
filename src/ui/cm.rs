@@ -196,3 +196,4 @@ impl sciter::EventHandler for SciterConnectionManager {
         fn get_supported_privacy_mode_impls();
     }
 }
+

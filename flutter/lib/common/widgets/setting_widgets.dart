@@ -1,9 +1,9 @@
 import 'package:debounce_throttle/debounce_throttle.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_hbb/common.dart';
-import 'package:flutter_hbb/consts.dart';
-import 'package:flutter_hbb/models/platform_model.dart';
+import 'package:deskviewer/common.dart';
+import 'package:deskviewer/consts.dart';
+import 'package:deskviewer/models/platform_model.dart';
 import 'package:get/get.dart';
 
 customImageQualityWidget(
@@ -220,9 +220,9 @@ List<(String, String)> otherDefaultSettings() {
       ('show_monitors_tip', kKeyShowMonitorsToolbar),
     if ((isDesktop || isWebDesktop))
       ('Collapse toolbar', kOptionCollapseToolbar),
-    ('Show remote cursor', kOptionShowRemoteCursor),
-    ('Follow remote cursor', kOptionFollowRemoteCursor),
-    ('Follow remote window focus', kOptionFollowRemoteWindow),
+    ('Show cursor', kOptionShowRemoteCursor),
+    ('Follow cursor', kOptionFollowRemoteCursor),
+    ('Follow window focus', kOptionFollowRemoteWindow),
     if ((isDesktop || isWebDesktop)) ('Zoom cursor', kOptionZoomCursor),
     ('Show quality monitor', kOptionShowQualityMonitor),
     ('Mute', kOptionDisableAudio),

@@ -9,11 +9,11 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
-import 'package:flutter_hbb/common.dart';
-import 'package:flutter_hbb/common/widgets/remote_input.dart';
-import 'package:flutter_hbb/models/input_model.dart';
-import 'package:flutter_hbb/models/model.dart';
-import 'package:flutter_hbb/models/platform_model.dart';
+import 'package:deskviewer/common.dart';
+import 'package:deskviewer/common/widgets/remote_input.dart';
+import 'package:deskviewer/models/input_model.dart';
+import 'package:deskviewer/models/model.dart';
+import 'package:deskviewer/models/platform_model.dart';
 
 // Used for the wheel button and wheel scroll widgets
 const double _kSpaceToHorizontalEdge = 25;
@@ -903,3 +903,4 @@ class _JoystickPainter extends CustomPainter {
         oldDelegate._isPressed != _isPressed;
   }
 }
+

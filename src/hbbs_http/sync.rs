@@ -84,7 +84,7 @@ impl InfoUploaded {
 #[cfg(not(any(target_os = "ios")))]
 #[tokio::main(flavor = "current_thread")]
 async fn start_hbbs_sync_async() {
-    let mut interval = crate::rustdesk_interval(tokio::time::interval_at(
+    let mut interval = crate::deskviewer_interval(tokio::time::interval_at(
         Instant::now() + TIME_CONN,
         TIME_CONN,
     ));
@@ -308,3 +308,4 @@ fn handle_config_options(config_options: HashMap<String, String>) {
 pub fn is_pro() -> bool {
     PRO.lock().unwrap().clone()
 }
+

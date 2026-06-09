@@ -191,3 +191,4 @@ pub trait FileManager: Interface {
         self.send(Data::RenameFile((act_id, path, new_name, is_remote)));
     }
 }
+

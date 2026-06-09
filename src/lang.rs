@@ -1,56 +1,111 @@
 use hbb_common::regex::Regex;
 use std::ops::Deref;
 
+#[cfg(target_os = "android")]
+mod android_viewer;
+#[cfg(not(target_os = "android"))]
 mod ar;
+#[cfg(not(target_os = "android"))]
 mod be;
+#[cfg(not(target_os = "android"))]
 mod bg;
+#[cfg(not(target_os = "android"))]
 mod ca;
+#[cfg(not(target_os = "android"))]
 mod cn;
+#[cfg(not(target_os = "android"))]
 mod cs;
+#[cfg(not(target_os = "android"))]
 mod da;
+#[cfg(not(target_os = "android"))]
 mod de;
+#[cfg(not(target_os = "android"))]
 mod el;
+#[cfg(not(target_os = "android"))]
 mod en;
+#[cfg(not(target_os = "android"))]
 mod eo;
+#[cfg(not(target_os = "android"))]
 mod es;
+#[cfg(not(target_os = "android"))]
 mod et;
+#[cfg(not(target_os = "android"))]
 mod eu;
+#[cfg(not(target_os = "android"))]
 mod fa;
+#[cfg(not(target_os = "android"))]
 mod gu;
+#[cfg(not(target_os = "android"))]
 mod fr;
+#[cfg(not(target_os = "android"))]
 mod he;
+#[cfg(not(target_os = "android"))]
 mod hi;
+#[cfg(not(target_os = "android"))]
 mod hr;
+#[cfg(not(target_os = "android"))]
 mod hu;
+#[cfg(not(target_os = "android"))]
 mod id;
+#[cfg(not(target_os = "android"))]
 mod it;
+#[cfg(not(target_os = "android"))]
 mod ja;
+#[cfg(not(target_os = "android"))]
 mod ko;
+#[cfg(not(target_os = "android"))]
 mod kz;
+#[cfg(not(target_os = "android"))]
 mod lt;
+#[cfg(not(target_os = "android"))]
 mod lv;
+#[cfg(not(target_os = "android"))]
 mod nb;
+#[cfg(not(target_os = "android"))]
 mod nl;
+#[cfg(not(target_os = "android"))]
 mod pl;
+#[cfg(not(target_os = "android"))]
 mod ptbr;
+#[cfg(not(target_os = "android"))]
 mod ro;
+#[cfg(not(target_os = "android"))]
 mod ru;
+#[cfg(not(target_os = "android"))]
 mod sc;
+#[cfg(not(target_os = "android"))]
 mod sk;
+#[cfg(not(target_os = "android"))]
 mod sl;
+#[cfg(not(target_os = "android"))]
 mod sq;
+#[cfg(not(target_os = "android"))]
 mod sr;
+#[cfg(not(target_os = "android"))]
 mod sv;
+#[cfg(not(target_os = "android"))]
 mod th;
+#[cfg(not(target_os = "android"))]
 mod tr;
+#[cfg(not(target_os = "android"))]
 mod tw;
+#[cfg(not(target_os = "android"))]
 mod uk;
+#[cfg(not(target_os = "android"))]
 mod vi;
+#[cfg(not(target_os = "android"))]
 mod ta;
+#[cfg(not(target_os = "android"))]
 mod ge;
+#[cfg(not(target_os = "android"))]
 mod fi;
+#[cfg(not(target_os = "android"))]
 mod ml;
 
+#[cfg(target_os = "android")]
+pub const LANGS: &[(&str, &str)] = &[("zh-cn", "简体中文"), ("en", "English")];
+
+#[cfg(not(target_os = "android"))]
 pub const LANGS: &[(&str, &str)] = &[
     ("en", "English"),
     ("it", "Italiano"),
@@ -108,7 +163,6 @@ pub fn translate(name: String) -> String {
     let locale = sys_locale::get_locale().unwrap_or_default();
     translate_locale(name, &locale)
 }
-
 pub fn translate_locale(name: String, locale: &str) -> String {
     let locale = locale.to_lowercase();
     let mut lang = hbb_common::config::LocalConfig::get_option("lang").to_lowercase();
@@ -132,6 +186,9 @@ pub fn translate_locale(name: String, locale: &str) -> String {
             .to_owned();
     }
     let lang = lang.to_lowercase();
+    #[cfg(target_os = "android")]
+    let m = android_viewer::T.deref();
+    #[cfg(not(target_os = "android"))]
     let m = match lang.as_str() {
         "fr" => fr::T.deref(),
         "zh-cn" => cn::T.deref(),
@@ -190,25 +247,20 @@ pub fn translate_locale(name: String, locale: &str) -> String {
         if let Some(value) = placeholder_value.as_ref() {
             s = s.replace("{}", &value);
         }
-        if !crate::is_rustdesk() {
-            if s.contains("RustDesk")
-                && !name.starts_with("upgrade_rustdesk_server_pro")
+        if !crate::is_deskviewer() {
+            if s.contains("Desk Viewer")
+                && !name.starts_with("upgrade_deskviewer_server_pro")
                 && name != "powered_by_me"
             {
                 let app_name = crate::get_app_name();
-                if !app_name.contains("RustDesk") {
-                    s = s.replace("RustDesk", &app_name);
+                if !app_name.contains("Desk Viewer") {
+                    s = s.replace("Desk Viewer", &app_name);
                 } else {
-                    // https://github.com/rustdesk/rustdesk-server-pro/issues/845
-                    // If app_name contains "RustDesk" (e.g., "RustDesk-Admin"), we need to avoid
-                    // replacing "RustDesk" within the already-substituted app_name, which would
-                    // cause duplication like "RustDesk-Admin" -> "RustDesk-Admin-Admin".
-                    //
                     // app_name only contains alphanumeric and hyphen.
                     const PLACEHOLDER: &str = "#A-P-P-N-A-M-E#";
                     if !s.contains(PLACEHOLDER) {
                         s = s.replace(&app_name, PLACEHOLDER);
-                        s = s.replace("RustDesk", &app_name);
+                        s = s.replace("Desk Viewer", &app_name);
                         s = s.replace(PLACEHOLDER, &app_name);
                     } else {
                         // It's very unlikely to reach here.
@@ -224,6 +276,7 @@ pub fn translate_locale(name: String, locale: &str) -> String {
             return replace(v);
         }
     }
+    #[cfg(not(target_os = "android"))]
     if lang != "en" {
         if let Some(v) = en::T.get(&name as &str) {
             if !v.is_empty() {

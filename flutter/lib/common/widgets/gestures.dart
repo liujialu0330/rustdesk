@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
-import 'package:flutter_hbb/common/widgets/remote_input.dart';
+import 'package:deskviewer/common/widgets/remote_input.dart';
 
 enum GestureState {
   none,
@@ -795,3 +795,4 @@ RawGestureDetector getMixinGestureDetector({
         }),
       });
 }
+

@@ -1,5 +1,5 @@
 import 'package:desktop_multi_window/desktop_multi_window.dart';
-import 'package:flutter_hbb/common.dart';
+import 'package:deskviewer/common.dart';
 import 'package:get/get.dart';
 
 import '../consts.dart';
@@ -109,7 +109,7 @@ class StateGlobal {
       final wc = WindowController.fromWindowId(windowId);
       wc.setFullscreen(_fullscreen.isTrue).then((_) {
         // We remove the redraw (width + 1, height + 1), because this issue cannot be reproduced.
-        // https://github.com/rustdesk/rustdesk/issues/9675
+        // https://github.com/liujialu0330/deskviewer/issues/9675
       });
     }
   }
@@ -145,3 +145,5 @@ class StateGlobal {
 
 // This final variable is initialized when the first time it is accessed.
 final stateGlobal = StateGlobal.instance;
+
+

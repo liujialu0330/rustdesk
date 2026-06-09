@@ -21,7 +21,7 @@ use std::time::{Duration, Instant};
 
 lazy_static! {
     static ref JVM: RwLock<Option<JavaVM>> = RwLock::new(None);
-    static ref MAIN_SERVICE_CTX: RwLock<Option<GlobalRef>> = RwLock::new(None); // MainService -> video service / audio service / info
+    static ref ANDROID_MEDIA_CTX: RwLock<Option<GlobalRef>> = RwLock::new(None);
     static ref APPLICATION_CONTEXT: RwLock<Option<GlobalRef>> = RwLock::new(None);
     static ref VIDEO_RAW: Mutex<FrameRaw> = Mutex::new(FrameRaw::new("video", MAX_VIDEO_FRAME_TIMEOUT));
     static ref AUDIO_RAW: Mutex<FrameRaw> = Mutex::new(FrameRaw::new("audio", MAX_AUDIO_FRAME_TIMEOUT));
@@ -190,7 +190,7 @@ pub extern "system" fn Java_ffi_FFI_setFrameRawEnable(
 
 #[no_mangle]
 pub extern "system" fn Java_ffi_FFI_init(env: JNIEnv, _class: JClass, ctx: JObject) {
-    log::debug!("MainService init from java");
+    log::debug!("Android media context init from java");
     if let Ok(jvm) = env.get_java_vm() {
         let java_vm = jvm.get_java_vm_pointer() as *mut c_void;
         let mut jvm_lock = JVM.write().unwrap();
@@ -200,7 +200,7 @@ pub extern "system" fn Java_ffi_FFI_init(env: JNIEnv, _class: JClass, ctx: JObje
         drop(jvm_lock);
         if let Ok(context) = env.new_global_ref(ctx) {
             let context_jobject = context.as_obj().as_raw() as *mut c_void;
-            *MAIN_SERVICE_CTX.write().unwrap() = Some(context);
+            *ANDROID_MEDIA_CTX.write().unwrap() = Some(context);
             init_ndk_context(java_vm, context_jobject);
         }
     }
@@ -294,7 +294,7 @@ pub fn clear_codec_info() {
 pub fn call_main_service_pointer_input(kind: &str, mask: i32, x: i32, y: i32) -> JniResult<()> {
     if let (Some(jvm), Some(ctx)) = (
         JVM.read().unwrap().as_ref(),
-        MAIN_SERVICE_CTX.read().unwrap().as_ref(),
+        ANDROID_MEDIA_CTX.read().unwrap().as_ref(),
     ) {
         let mut env = jvm.attach_current_thread_as_daemon()?;
         let kind = if kind == "touch" { 0 } else { 1 };
@@ -318,7 +318,7 @@ pub fn call_main_service_pointer_input(kind: &str, mask: i32, x: i32, y: i32) ->
 pub fn call_main_service_key_event(data: &[u8]) -> JniResult<()> {
     if let (Some(jvm), Some(ctx)) = (
         JVM.read().unwrap().as_ref(),
-        MAIN_SERVICE_CTX.read().unwrap().as_ref(),
+        ANDROID_MEDIA_CTX.read().unwrap().as_ref(),
     ) {
         let mut env = jvm.attach_current_thread_as_daemon()?;
         let data = env.byte_array_from_slice(data)?;
@@ -383,7 +383,7 @@ pub fn call_clipboard_manager_enable_client_clipboard(enable: bool) -> JniResult
 pub fn call_main_service_get_by_name(name: &str) -> JniResult<String> {
     if let (Some(jvm), Some(ctx)) = (
         JVM.read().unwrap().as_ref(),
-        MAIN_SERVICE_CTX.read().unwrap().as_ref(),
+        ANDROID_MEDIA_CTX.read().unwrap().as_ref(),
     ) {
         let mut env = jvm.attach_current_thread_as_daemon()?;
         let res = env.with_local_frame(10, |env| -> JniResult<String> {
@@ -414,7 +414,7 @@ pub fn call_main_service_set_by_name(
 ) -> JniResult<()> {
     if let (Some(jvm), Some(ctx)) = (
         JVM.read().unwrap().as_ref(),
-        MAIN_SERVICE_CTX.read().unwrap().as_ref(),
+        ANDROID_MEDIA_CTX.read().unwrap().as_ref(),
     ) {
         let mut env = jvm.attach_current_thread_as_daemon()?;
         env.with_local_frame(10, |env| -> JniResult<()> {
@@ -440,12 +440,12 @@ pub fn call_main_service_set_by_name(
     }
 }
 
-// Difference between MainService, MainActivity, JNI_OnLoad:
-//  jvm is the same, ctx is differen and ctx of JNI_OnLoad is null.
+// Difference between media context, MainActivity, JNI_OnLoad:
+//  jvm is the same, ctx is different and ctx of JNI_OnLoad is null.
 //  cpal: all three works
-//  Service(GetByName, ...): only ctx from MainService works, so use 2 init context functions
+//  Service(GetByName, ...): only media ctx works, so use 2 init context functions
 // On app start: JNI_OnLoad or MainActivity init context
-// On service start first time: MainService replace the context
+// On media context init: replace the context
 
 fn init_ndk_context(java_vm: *mut c_void, context_jobject: *mut c_void) {
     let mut lock = NDK_CONTEXT_INITED.lock().unwrap();

@@ -356,3 +356,4 @@ impl<T: Subscriber + From<ConnInner>> Drop for ServiceSwap<T> {
         (self.0).0.write().unwrap().swap_new_subscribes();
     }
 }
+

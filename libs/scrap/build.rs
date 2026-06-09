@@ -144,6 +144,8 @@ fn generate_bindings(
     exact_file: &Path,
     regex: &str,
 ) {
+    let target = env::var("TARGET").unwrap_or_default();
+    let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
     let mut b = bindgen::builder()
         .header(ffi_header.to_str().unwrap())
         .allowlist_type(regex)
@@ -156,6 +158,19 @@ fn generate_bindings(
 
     for dir in include_paths {
         b = b.clang_arg(format!("-I{}", dir.display()));
+    }
+    if target_os == "android" {
+        b = b.clang_arg(format!("--target={}", target));
+        if let Ok(ndk_home) = env::var("ANDROID_NDK_HOME").or_else(|_| env::var("ANDROID_NDK_ROOT")) {
+            let sysroot = Path::new(&ndk_home)
+                .join("toolchains")
+                .join("llvm")
+                .join("prebuilt")
+                .join(if cfg!(windows) { "windows-x86_64" } else { "linux-x86_64" })
+                .join("sysroot");
+            b = b.clang_arg(format!("--sysroot={}", sysroot.display()));
+        }
+        b = b.clang_arg("-D__ANDROID_API__=22");
     }
 
     b.generate().unwrap().write_to_file(ffi_rs).unwrap();

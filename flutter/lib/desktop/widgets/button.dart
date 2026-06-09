@@ -169,3 +169,4 @@ class _FixedWidthButtonState extends State<FixedWidthButton> {
         ));
   }
 }
+

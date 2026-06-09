@@ -178,3 +178,4 @@ pub(super) fn create_font_face() -> ResultType<Face<'static>> {
     let face = Face::parse(font_data, face_index)?;
     Ok(face)
 }
+

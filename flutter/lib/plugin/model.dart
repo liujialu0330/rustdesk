@@ -108,3 +108,4 @@ void updateOption(
   final k = OptionModel.key(location, id, peer, key);
   _optionModels[k]?.value = value;
 }
+

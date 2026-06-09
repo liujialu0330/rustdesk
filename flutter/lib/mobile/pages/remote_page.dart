@@ -2,13 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_hbb/common/shared_state.dart';
-import 'package:flutter_hbb/common/widgets/toolbar.dart';
-import 'package:flutter_hbb/consts.dart';
-import 'package:flutter_hbb/mobile/widgets/floating_mouse.dart';
-import 'package:flutter_hbb/mobile/widgets/floating_mouse_widgets.dart';
-import 'package:flutter_hbb/mobile/widgets/gesture_help.dart';
-import 'package:flutter_hbb/models/chat_model.dart';
+import 'package:deskviewer/common/shared_state.dart';
+import 'package:deskviewer/common/widgets/toolbar.dart';
+import 'package:deskviewer/consts.dart';
+import 'package:deskviewer/mobile/widgets/floating_mouse.dart';
+import 'package:deskviewer/mobile/widgets/floating_mouse_widgets.dart';
+import 'package:deskviewer/mobile/widgets/gesture_help.dart';
+import 'package:deskviewer/models/chat_model.dart';
 import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:get/get.dart';
@@ -64,6 +64,7 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
   bool _showGestureHelp = false;
   String _value = '';
   Orientation? _currentOrientation;
+  bool _forceLandscape = false;
   final _uniqueKey = UniqueKey();
   Timer? _iosKeyboardWorkaroundTimer;
 
@@ -102,6 +103,13 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: []);
+      _forceLandscape = mainGetLocalBoolOptionSync(kOptionAutoLandscapeInSession);
+      if (_forceLandscape) {
+        SystemChrome.setPreferredOrientations(const [
+          DeviceOrientation.landscapeLeft,
+          DeviceOrientation.landscapeRight,
+        ]);
+      }
       gFFI.dialogManager
           .showLoading(translate('Connecting...'), onCancel: closeConnection);
     });
@@ -169,6 +177,7 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
     gFFI.dialogManager.dismissAll();
     await SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
         overlays: SystemUiOverlay.values);
+    await SystemChrome.setPreferredOrientations(const []);
     WakelockManager.disable(_uniqueKey);
     await keyboardSubscription.cancel();
     removeSharedStates(widget.id);
@@ -249,7 +258,7 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
 
       // Workaround for iOS: physical keyboard input fails after virtual keyboard is hidden
       // https://github.com/flutter/flutter/issues/39900
-      // https://github.com/rustdesk/rustdesk/discussions/11843#discussioncomment-13499698 - Virtual keyboard issue
+      // https://github.com/liujialu0330/deskviewer/discussions/11843#discussioncomment-13499698 - Virtual keyboard issue
       if (isIOS) {
         _iosKeyboardWorkaroundTimer?.cancel();
         _iosKeyboardWorkaroundTimer = Timer(Duration(milliseconds: 100), () {
@@ -435,7 +444,9 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
 
   Widget _bottomWidget() => _showGestureHelp
       ? getGestureHelp()
-      : (_showBar && gFFI.ffiModel.pi.displays.isNotEmpty
+      : ((MediaQuery.of(context).orientation == Orientation.portrait) &&
+              _showBar &&
+              gFFI.ffiModel.pi.displays.isNotEmpty
           ? getBottomAppBar()
           : Offstage());
 
@@ -451,7 +462,7 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
         return false;
       },
       child: Scaffold(
-          // workaround for https://github.com/rustdesk/rustdesk/issues/3131
+          // workaround for https://github.com/liujialu0330/deskviewer/issues/3131
           floatingActionButtonLocation: keyboardIsVisible
               ? FABLocation(FloatingActionButtonLocation.endFloat, 0, -35)
               : null,
@@ -496,38 +507,56 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
                       : Offstage(),
                 ],
               )),
-          body: Obx(
-            () => getRawPointerAndKeyBody(Overlay(
-              initialEntries: [
-                OverlayEntry(builder: (context) {
-                  return Container(
-                    color: kColorCanvas,
-                    child: isWebDesktop
-                        ? getBodyForDesktopWithListener()
-                        : SafeArea(
-                            child:
-                                OrientationBuilder(builder: (ctx, orientation) {
-                              if (_currentOrientation != orientation) {
-                                Timer(const Duration(milliseconds: 200), () {
-                                  gFFI.dialogManager
-                                      .resetMobileActionsOverlay(ffi: gFFI);
-                                  _currentOrientation = orientation;
-                                  gFFI.canvasModel.updateViewStyle();
-                                });
-                              }
-                              return Container(
-                                color: MyTheme.canvasColor,
-                                child: RawTouchGestureDetectorRegion(
-                                  child: getBodyForMobile(),
-                                  ffi: gFFI,
-                                ),
-                              );
-                            }),
-                          ),
-                  );
-                })
-              ],
-            )),
+          body: Stack(
+            children: [
+              Obx(
+                () => getRawPointerAndKeyBody(Overlay(
+                  initialEntries: [
+                    OverlayEntry(builder: (context) {
+                      return Container(
+                        color: kColorCanvas,
+                        child: isWebDesktop
+                            ? getBodyForDesktopWithListener()
+                            : SafeArea(
+                                child: OrientationBuilder(
+                                    builder: (ctx, orientation) {
+                                  if (_currentOrientation != orientation) {
+                                    Timer(const Duration(milliseconds: 200),
+                                        () {
+                                      gFFI.dialogManager
+                                          .resetMobileActionsOverlay(ffi: gFFI);
+                                      _currentOrientation = orientation;
+                                      gFFI.canvasModel.updateViewStyle();
+                                    });
+                                  }
+                                  return Container(
+                                    color: MyTheme.canvasColor,
+                                    child: RawTouchGestureDetectorRegion(
+                                      child: getBodyForMobile(),
+                                      ffi: gFFI,
+                                    ),
+                                  );
+                                }),
+                              ),
+                      );
+                    })
+                  ],
+                )),
+              ),
+              Obx(() {
+                final show =
+                    MediaQuery.of(context).orientation ==
+                            Orientation.landscape &&
+                        _showBar &&
+                        !_showGestureHelp &&
+                        gFFI.ffiModel.pi.displays.isNotEmpty;
+                return show
+                    ? Align(
+                        alignment: Alignment.centerRight,
+                        child: getRightAppBar())
+                    : Offstage();
+              }),
+            ],
           )),
     );
   }
@@ -548,6 +577,102 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
     );
   }
 
+  List<Widget> _toolbarActions(FfiModel ffiModel) {
+    return <Widget>[
+          IconButton(
+            color: Colors.white,
+            icon: Icon(Icons.clear),
+            onPressed: () {
+              clientClose(sessionId, gFFI);
+            },
+          ),
+          IconButton(
+            color: Colors.white,
+            icon: Icon(Icons.tv),
+            onPressed: () {
+              setState(() => _showEdit = false);
+              showOptions(context, widget.id, gFFI.dialogManager);
+            },
+          ),
+          IconButton(
+            color: Colors.white,
+            icon: Icon(_forceLandscape
+                ? Icons.screen_lock_landscape
+                : Icons.screen_rotation),
+            tooltip: translate(_forceLandscape
+                ? 'Follow device orientation'
+                : 'Force landscape'),
+            onPressed: () {
+              setState(() => _forceLandscape = !_forceLandscape);
+              SystemChrome.setPreferredOrientations(_forceLandscape
+                  ? const [
+                      DeviceOrientation.landscapeLeft,
+                      DeviceOrientation.landscapeRight,
+                    ]
+                  : const []);
+            },
+          ),
+        ] +
+        (isWebDesktop || ffiModel.viewOnly || !ffiModel.keyboard
+            ? []
+            : gFFI.ffiModel.isPeerAndroid
+                ? [
+                    IconButton(
+                        color: Colors.white,
+                        icon: Icon(Icons.keyboard),
+                        onPressed: openKeyboard),
+                    IconButton(
+                      color: Colors.white,
+                      icon: const Icon(Icons.build),
+                      onPressed: () => gFFI.dialogManager
+                          .toggleMobileActionsOverlay(ffi: gFFI),
+                    )
+                  ]
+                : [
+                    IconButton(
+                        color: Colors.white,
+                        icon: Icon(Icons.keyboard),
+                        onPressed: openKeyboard),
+                    IconButton(
+                      color: Colors.white,
+                      icon: Icon(gFFI.ffiModel.touchMode
+                          ? Icons.touch_app
+                          : Icons.mouse),
+                      onPressed: () => setState(
+                          () => _showGestureHelp = !_showGestureHelp),
+                    ),
+                  ]) +
+        (isWeb
+            ? []
+            : <Widget>[
+                futureBuilder(
+                    future: gFFI.invokeMethod(
+                        "get_value", "KEY_IS_SUPPORT_VOICE_CALL"),
+                    hasData: (isSupportVoiceCall) => IconButton(
+                          color: Colors.white,
+                          icon: isAndroid && isSupportVoiceCall
+                              ? SvgPicture.asset('assets/chat.svg',
+                                  colorFilter: ColorFilter.mode(
+                                      Colors.white, BlendMode.srcIn))
+                              : Icon(Icons.message),
+                          onPressed: () =>
+                              isAndroid && isSupportVoiceCall
+                                  ? showChatOptions(widget.id)
+                                  : onPressedTextChat(widget.id),
+                        ))
+              ]) +
+        [
+          IconButton(
+            color: Colors.white,
+            icon: Icon(Icons.more_vert),
+            onPressed: () {
+              setState(() => _showEdit = false);
+              showActions(widget.id);
+            },
+          ),
+        ];
+  }
+
   Widget getBottomAppBar() {
     final ffiModel = Provider.of<FfiModel>(context);
     return BottomAppBar(
@@ -557,82 +682,7 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
         mainAxisSize: MainAxisSize.max,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: <Widget>[
-          Row(
-              children: <Widget>[
-                    IconButton(
-                      color: Colors.white,
-                      icon: Icon(Icons.clear),
-                      onPressed: () {
-                        clientClose(sessionId, gFFI);
-                      },
-                    ),
-                    IconButton(
-                      color: Colors.white,
-                      icon: Icon(Icons.tv),
-                      onPressed: () {
-                        setState(() => _showEdit = false);
-                        showOptions(context, widget.id, gFFI.dialogManager);
-                      },
-                    )
-                  ] +
-                  (isWebDesktop || ffiModel.viewOnly || !ffiModel.keyboard
-                      ? []
-                      : gFFI.ffiModel.isPeerAndroid
-                          ? [
-                              IconButton(
-                                  color: Colors.white,
-                                  icon: Icon(Icons.keyboard),
-                                  onPressed: openKeyboard),
-                              IconButton(
-                                color: Colors.white,
-                                icon: const Icon(Icons.build),
-                                onPressed: () => gFFI.dialogManager
-                                    .toggleMobileActionsOverlay(ffi: gFFI),
-                              )
-                            ]
-                          : [
-                              IconButton(
-                                  color: Colors.white,
-                                  icon: Icon(Icons.keyboard),
-                                  onPressed: openKeyboard),
-                              IconButton(
-                                color: Colors.white,
-                                icon: Icon(gFFI.ffiModel.touchMode
-                                    ? Icons.touch_app
-                                    : Icons.mouse),
-                                onPressed: () => setState(
-                                    () => _showGestureHelp = !_showGestureHelp),
-                              ),
-                            ]) +
-                  (isWeb
-                      ? []
-                      : <Widget>[
-                          futureBuilder(
-                              future: gFFI.invokeMethod(
-                                  "get_value", "KEY_IS_SUPPORT_VOICE_CALL"),
-                              hasData: (isSupportVoiceCall) => IconButton(
-                                    color: Colors.white,
-                                    icon: isAndroid && isSupportVoiceCall
-                                        ? SvgPicture.asset('assets/chat.svg',
-                                            colorFilter: ColorFilter.mode(
-                                                Colors.white, BlendMode.srcIn))
-                                        : Icon(Icons.message),
-                                    onPressed: () =>
-                                        isAndroid && isSupportVoiceCall
-                                            ? showChatOptions(widget.id)
-                                            : onPressedTextChat(widget.id),
-                                  ))
-                        ]) +
-                  [
-                    IconButton(
-                      color: Colors.white,
-                      icon: Icon(Icons.more_vert),
-                      onPressed: () {
-                        setState(() => _showEdit = false);
-                        showActions(widget.id);
-                      },
-                    ),
-                  ]),
+          Row(children: _toolbarActions(ffiModel)),
           Obx(() => IconButton(
                 color: Colors.white,
                 icon: Icon(Icons.expand_more),
@@ -643,6 +693,34 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
                       },
               )),
         ],
+      ),
+    );
+  }
+
+  Widget getRightAppBar() {
+    final ffiModel = Provider.of<FfiModel>(context);
+    return SafeArea(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {},
+        child: Container(
+          color: MyTheme.accent,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: _toolbarActions(ffiModel) +
+                  [
+                    Obx(() => IconButton(
+                          color: Colors.white,
+                          icon: Icon(Icons.expand_more),
+                          onPressed: gFFI.ffiModel.waitForFirstImage.isTrue
+                              ? null
+                              : () => setState(() => _showBar = !_showBar),
+                        )),
+                  ],
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -4,10 +4,10 @@ import 'dart:collection';
 import 'package:dynamic_layouts/dynamic_layouts.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_hbb/consts.dart';
-import 'package:flutter_hbb/models/ab_model.dart';
-import 'package:flutter_hbb/models/peer_tab_model.dart';
-import 'package:flutter_hbb/models/state_model.dart';
+import 'package:deskviewer/consts.dart';
+import 'package:deskviewer/models/ab_model.dart';
+import 'package:deskviewer/models/peer_tab_model.dart';
+import 'package:deskviewer/models/state_model.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:visibility_detector/visibility_detector.dart';
@@ -22,8 +22,8 @@ typedef PeerFilter = bool Function(Peer peer);
 typedef PeerCardBuilder = Widget Function(Peer peer);
 
 class PeerSortType {
-  static const String remoteId = 'Remote ID';
-  static const String remoteHost = 'Remote Host';
+  static const String remoteId = 'Device ID';
+  static const String remoteHost = 'Target Host';
   static const String username = 'Username';
   static const String status = 'Status';
 

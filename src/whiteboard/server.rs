@@ -169,3 +169,4 @@ impl Ripple {
         (radius, alpha)
     }
 }
+

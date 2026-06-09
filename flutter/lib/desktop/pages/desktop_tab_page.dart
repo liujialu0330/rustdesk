@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_hbb/common.dart';
-import 'package:flutter_hbb/consts.dart';
-import 'package:flutter_hbb/desktop/pages/desktop_home_page.dart';
-import 'package:flutter_hbb/desktop/pages/desktop_setting_page.dart';
-import 'package:flutter_hbb/desktop/widgets/tabbar_widget.dart';
-import 'package:flutter_hbb/models/platform_model.dart';
-import 'package:flutter_hbb/models/state_model.dart';
+import 'package:deskviewer/common.dart';
+import 'package:deskviewer/consts.dart';
+import 'package:deskviewer/desktop/pages/desktop_home_page.dart';
+import 'package:deskviewer/desktop/pages/desktop_setting_page.dart';
+import 'package:deskviewer/desktop/widgets/tabbar_widget.dart';
+import 'package:deskviewer/models/platform_model.dart';
+import 'package:deskviewer/models/state_model.dart';
 import 'package:get/get.dart';
 import 'package:window_manager/window_manager.dart';
 // import 'package:flutter/services.dart';
@@ -117,3 +117,4 @@ class _DesktopTabPageState extends State<DesktopTabPage> {
           );
   }
 }
+

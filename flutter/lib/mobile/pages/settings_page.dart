@@ -3,8 +3,8 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_hbb/common/widgets/setting_widgets.dart';
-import 'package:flutter_hbb/desktop/pages/desktop_setting_page.dart';
+import 'package:deskviewer/common/widgets/setting_widgets.dart';
+import 'package:deskviewer/desktop/pages/desktop_setting_page.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:settings_ui/settings_ui.dart';
@@ -20,7 +20,6 @@ import '../../models/platform_model.dart';
 import '../widgets/deploy_dialog.dart';
 import '../widgets/dialog.dart';
 import 'home_page.dart';
-import 'scan_page.dart';
 
 class SettingsPage extends StatefulWidget implements PageShape {
   @override
@@ -30,13 +29,12 @@ class SettingsPage extends StatefulWidget implements PageShape {
   final icon = Icon(Icons.settings);
 
   @override
-  final appBarActions = bind.isDisableSettings() ? [] : [ScanButton()];
+  final appBarActions = [];
 
   @override
   State<SettingsPage> createState() => _SettingsState();
 }
-
-const url = 'https://rustdesk.com/';
+const url = '';
 
 enum KeepScreenOn {
   never,
@@ -102,6 +100,7 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
   var _isUsingPublicServer = false;
   var _allowAskForNoteAtEndOfConnection = false;
   var _preventSleepWhileConnected = true;
+  var _autoLandscapeInSession = true;
 
   _SettingsState() {
     _enableAbr = option2bool(
@@ -144,6 +143,8 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
         mainGetLocalBoolOptionSync(kOptionAllowAskForNoteAtEndOfConnection);
     _preventSleepWhileConnected =
         mainGetLocalBoolOptionSync(kOptionKeepAwakeDuringOutgoingSessions);
+    _autoLandscapeInSession =
+        mainGetLocalBoolOptionSync(kOptionAutoLandscapeInSession);
     _showTerminalExtraKeys =
         mainGetLocalBoolOptionSync(kOptionEnableShowTerminalExtraKeys);
   }
@@ -154,6 +155,10 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (isAndroid && kAndroidViewerOnly) {
+        return;
+      }
+
       var update = false;
 
       if (_hasIgnoreBattery) {
@@ -237,6 +242,10 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (isAndroid && kAndroidViewerOnly) {
+      return;
+    }
+
     if (state == AppLifecycleState.resumed) {
       () async {
         final ibs = await checkAndUpdateIgnoreBatteryStatus();
@@ -274,8 +283,8 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     Provider.of<FfiModel>(context);
-    final outgoingOnly = bind.isOutgoingOnly();
-    final incomingOnly = bind.isIncomingOnly();
+    final outgoingOnly = (isAndroid && kAndroidViewerOnly) || bind.isOutgoingOnly();
+    final incomingOnly = bind.isIncomingOnly() && !(isAndroid && kAndroidViewerOnly);
     final customClientSection = CustomSettingsSection(
         child: Column(
       children: [
@@ -522,7 +531,7 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
               },
       )
     ];
-    if (_hasIgnoreBattery) {
+    if (_hasIgnoreBattery && !(isAndroid && kAndroidViewerOnly)) {
       enhancementsTiles.insert(
           0,
           SettingsTile.switchTile(
@@ -530,7 +539,7 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
               title: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(translate('Keep RustDesk background service')),
+                    Text(translate('Keep background service')),
                     Text('* ${translate('Ignore Battery Optimizations')}',
                         style: Theme.of(context).textTheme.bodySmall),
                   ]),
@@ -560,38 +569,40 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
                 }
               }));
     }
-    enhancementsTiles.add(SettingsTile.switchTile(
-        initialValue: _enableStartOnBoot,
-        title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(translate('Start on boot')),
-          Text(
-              '* ${translate('Start the screen sharing service on boot, requires special permissions')}',
-              style: Theme.of(context).textTheme.bodySmall),
-        ]),
-        onToggle: (toValue) async {
-          if (toValue) {
-            // 1. request kIgnoreBatteryOptimizations
-            if (!await AndroidPermissionManager.check(
-                kRequestIgnoreBatteryOptimizations)) {
-              if (!await AndroidPermissionManager.request(
+    if (!(isAndroid && kAndroidViewerOnly)) {
+      enhancementsTiles.add(SettingsTile.switchTile(
+          initialValue: _enableStartOnBoot,
+          title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(translate('Start on boot')),
+            Text(
+                '* ${translate('Start the screen sharing service on boot, requires special permissions')}',
+                style: Theme.of(context).textTheme.bodySmall),
+          ]),
+          onToggle: (toValue) async {
+            if (toValue) {
+              // 1. request kIgnoreBatteryOptimizations
+              if (!await AndroidPermissionManager.check(
                   kRequestIgnoreBatteryOptimizations)) {
-                return;
+                if (!await AndroidPermissionManager.request(
+                    kRequestIgnoreBatteryOptimizations)) {
+                  return;
+                }
               }
-            }
 
-            // 2. request kSystemAlertWindow
-            if (!await AndroidPermissionManager.check(kSystemAlertWindow)) {
-              if (!await AndroidPermissionManager.request(kSystemAlertWindow)) {
-                return;
+              // 2. request kSystemAlertWindow
+              if (!await AndroidPermissionManager.check(kSystemAlertWindow)) {
+                if (!await AndroidPermissionManager.request(kSystemAlertWindow)) {
+                  return;
+                }
               }
+
+              // (Optional) 3. request input permission
             }
+            setState(() => _enableStartOnBoot = toValue);
 
-            // (Optional) 3. request input permission
-          }
-          setState(() => _enableStartOnBoot = toValue);
-
-          gFFI.invokeMethod(AndroidChannel.kSetStartOnBootOpt, toValue);
-        }));
+            gFFI.invokeMethod(AndroidChannel.kSetStartOnBootOpt, toValue);
+          }));
+    }
 
     if (!bind.isCustomClient()) {
       enhancementsTiles.add(
@@ -627,6 +638,8 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
     );
 
     onFloatingWindowChanged(bool toValue) async {
+      if (isAndroid && kAndroidViewerOnly) return;
+
       if (toValue) {
         if (!await AndroidPermissionManager.check(kSystemAlertWindow)) {
           if (!await AndroidPermissionManager.request(kSystemAlertWindow)) {
@@ -729,7 +742,7 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
                 onPressed: (context) {
                   changeSocks5Proxy();
                 }),
-          if (isAndroid && !bind.isOutgoingOnly())
+          if (isAndroid && !outgoingOnly)
             SettingsTile(
                 title: Text(translate('Deploy')),
                 leading: Icon(Icons.cloud_upload),
@@ -858,6 +871,17 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
                 });
               },
             ),
+          if (isAndroid)
+            SettingsTile.switchTile(
+              title: Text(translate('Auto landscape in session')),
+              initialValue: _autoLandscapeInSession,
+              onToggle: (v) async {
+                await mainSetLocalBoolOption(kOptionAutoLandscapeInSession, v);
+                setState(() {
+                  _autoLandscapeInSession = v;
+                });
+              },
+            ),
         ]),
         if (isAndroid)
           SettingsSection(title: Text(translate('Hardware Codec')), tiles: [
@@ -876,7 +900,7 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
                     },
             ),
           ]),
-        if (isAndroid)
+        if (isAndroid && !kAndroidViewerOnly)
           SettingsSection(
             title: Text(translate("Recording")),
             tiles: [
@@ -929,20 +953,23 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
             ],
           ),
         if (isAndroid &&
+            !kAndroidViewerOnly &&
             !disabledSettings &&
             !outgoingOnly &&
             !hideSecuritySettings)
           SettingsSection(title: Text('2FA'), tiles: tfaTiles),
         if (isAndroid &&
+            !kAndroidViewerOnly &&
             !disabledSettings &&
             !outgoingOnly &&
             !hideSecuritySettings)
           SettingsSection(
-            title: Text(translate("Share screen")),
+            title: Text(translate("Local service")),
             tiles: shareScreenTiles,
           ),
-        if (!bind.isIncomingOnly()) defaultDisplaySection(),
+        if (!incomingOnly) defaultDisplaySection(),
         if (isAndroid &&
+            !kAndroidViewerOnly &&
             !disabledSettings &&
             !outgoingOnly &&
             !hideSecuritySettings)
@@ -954,16 +981,10 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
           title: Text(translate("About")),
           tiles: [
             SettingsTile(
-                onPressed: (context) async {
-                  await launchUrl(Uri.parse(url));
-                },
                 title: Text(translate("Version: ") + version),
-                value: Padding(
+                value: const Padding(
                   padding: EdgeInsets.symmetric(vertical: 8),
-                  child: Text('rustdesk.com',
-                      style: TextStyle(
-                        decoration: TextDecoration.underline,
-                      )),
+                  child: Text('Self-hosted screen viewer'),
                 ),
                 leading: Icon(Icons.info)),
             SettingsTile(
@@ -983,9 +1004,7 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
                   ),
                   leading: Icon(Icons.fingerprint)),
             SettingsTile(
-              title: Text(translate("Privacy Statement")),
-              onPressed: (context) =>
-                  launchUrlString('https://rustdesk.com/privacy.html'),
+              title: const Text('Open-source notices'),
               leading: Icon(Icons.privacy_tip),
             )
           ],
@@ -996,6 +1015,8 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
   }
 
   Future<bool> canStartOnBoot() async {
+    if (isAndroid && kAndroidViewerOnly) return false;
+
     // start on boot depends on ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS and SYSTEM_ALERT_WINDOW
     if (_hasIgnoreBattery && !_ignoreBatteryOpt) {
       return false;
@@ -1093,42 +1114,14 @@ void showThemeSettings(OverlayDialogManager dialogManager) async {
 void showAbout(OverlayDialogManager dialogManager) {
   dialogManager.show((setState, close, context) {
     return CustomAlertDialog(
-      title: Text(translate('About RustDesk')),
+      title: const Text('About Desk Viewer'),
       content: Wrap(direction: Axis.vertical, spacing: 12, children: [
         Text('Version: $version'),
-        InkWell(
-            onTap: () async {
-              const url = 'https://rustdesk.com/';
-              await launchUrl(Uri.parse(url));
-            },
-            child: Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              child: Text('rustdesk.com',
-                  style: TextStyle(
-                    decoration: TextDecoration.underline,
-                  )),
-            )),
+        const Text('Self-hosted screen viewer'),
       ]),
       actions: [],
     );
   }, clickMaskDismiss: true, backDismiss: true);
-}
-
-class ScanButton extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return IconButton(
-      icon: Icon(Icons.qr_code_scanner),
-      onPressed: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (BuildContext context) => ScanPage(),
-          ),
-        );
-      },
-    );
-  }
 }
 
 class _DisplayPage extends StatefulWidget {

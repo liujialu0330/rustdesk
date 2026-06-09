@@ -457,3 +457,4 @@ unsafe fn open_device_handle(interface_guid: &GUID) -> Result<HANDLE, DeviceErro
     }
     Ok(h_device)
 }
+

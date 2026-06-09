@@ -56,3 +56,4 @@ class RelativeMouseAccumulator {
     _fracY = 0.0;
   }
 }
+

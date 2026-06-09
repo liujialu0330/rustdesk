@@ -35,3 +35,4 @@ pub fn new_voice_call_response(request_timestamp: i64, accepted: bool) -> Messag
     msg.set_voice_call_response(resp);
     msg
 }
+

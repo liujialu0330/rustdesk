@@ -2,11 +2,11 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_hbb/consts.dart';
-import 'package:flutter_hbb/main.dart';
-import 'package:flutter_hbb/mobile/pages/settings_page.dart';
-import 'package:flutter_hbb/models/chat_model.dart';
-import 'package:flutter_hbb/models/platform_model.dart';
+import 'package:deskviewer/consts.dart';
+import 'package:deskviewer/main.dart';
+import 'package:deskviewer/mobile/pages/settings_page.dart';
+import 'package:deskviewer/models/chat_model.dart';
+import 'package:deskviewer/models/platform_model.dart';
 import 'package:get/get.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -14,7 +14,6 @@ import '../common.dart';
 import '../common/formatter/id_formatter.dart';
 import '../desktop/pages/server_page.dart' as desktop;
 import '../desktop/widgets/tabbar_widget.dart';
-import '../mobile/pages/server_page.dart';
 import 'model.dart';
 
 const kLoginDialogTag = "LOGIN";
@@ -200,6 +199,19 @@ class ServerModel with ChangeNotifier {
   /// audio true by default (if permission on) (false default < Android 10)
   /// file true by default (if permission on)
   checkAndroidPermission() async {
+    if (isAndroid && kAndroidViewerOnly) {
+      _audioOk = false;
+      _fileOk = false;
+      _inputOk = false;
+      _mediaOk = false;
+      _isStart = false;
+      bind.mainSetOption(key: kOptionEnableAudio, value: "N");
+      bind.mainSetOption(key: kOptionEnableFileTransfer, value: "N");
+      bind.mainSetOption(key: kOptionEnableKeyboard, value: "N");
+      notifyListeners();
+      return;
+    }
+
     // audio
     if (androidVersion < 30 ||
         !await AndroidPermissionManager.check(kRecordAudio)) {
@@ -298,6 +310,8 @@ class ServerModel with ChangeNotifier {
   }
 
   toggleAudio() async {
+    if (isAndroid && kAndroidViewerOnly) return;
+
     if (clients.any((c) => !c.disconnected)) {
       await showClientsMayNotBeChangedAlert(parent.target);
     }
@@ -316,6 +330,8 @@ class ServerModel with ChangeNotifier {
   }
 
   toggleFile() async {
+    if (isAndroid && kAndroidViewerOnly) return;
+
     if (clients.any((c) => !c.disconnected)) {
       await showClientsMayNotBeChangedAlert(parent.target);
     }
@@ -337,6 +353,8 @@ class ServerModel with ChangeNotifier {
   }
 
   toggleClipboard() async {
+    if (isAndroid && kAndroidViewerOnly) return;
+
     _clipboardOk = !clipboardOk;
     bind.mainSetOption(
         key: kOptionEnableClipboard,
@@ -345,6 +363,8 @@ class ServerModel with ChangeNotifier {
   }
 
   toggleInput() async {
+    if (isAndroid && kAndroidViewerOnly) return;
+
     if (clients.any((c) => !c.disconnected)) {
       await showClientsMayNotBeChangedAlert(parent.target);
     }
@@ -361,6 +381,8 @@ class ServerModel with ChangeNotifier {
   }
 
   Future<bool> checkRequestNotificationPermission() async {
+    if (isAndroid && kAndroidViewerOnly) return false;
+
     debugPrint("androidVersion $androidVersion");
     if (androidVersion < 33) {
       return true;
@@ -375,6 +397,8 @@ class ServerModel with ChangeNotifier {
   }
 
   Future<bool> checkFloatingWindowPermission() async {
+    if (isAndroid && kAndroidViewerOnly) return false;
+
     debugPrint("androidVersion $androidVersion");
     if (androidVersion < 23) {
       return false;
@@ -390,6 +414,8 @@ class ServerModel with ChangeNotifier {
 
   /// Toggle the screen sharing service.
   toggleService() async {
+    if (isAndroid && kAndroidViewerOnly) return;
+
     if (_isStart) {
       final res = await parent.target?.dialogManager
           .show<bool>((setState, close, context) {
@@ -448,6 +474,18 @@ class ServerModel with ChangeNotifier {
 
   /// Start the screen sharing service.
   Future<void> startService() async {
+    if (isAndroid && kAndroidViewerOnly) {
+      _isStart = false;
+      _mediaOk = false;
+      _inputOk = false;
+      _audioOk = false;
+      _fileOk = false;
+      await bind.mainStopService();
+      WakelockManager.disable(_wakelockKey);
+      notifyListeners();
+      return;
+    }
+
     _isStart = true;
     notifyListeners();
     parent.target?.ffiModel.updateEventListener(parent.target!.sessionId, "");
@@ -480,6 +518,14 @@ class ServerModel with ChangeNotifier {
   }
 
   changeStatue(String name, bool value) {
+    if (isAndroid && kAndroidViewerOnly) {
+      _mediaOk = false;
+      _inputOk = false;
+      _isStart = false;
+      notifyListeners();
+      return;
+    }
+
     debugPrint("changeStatue value $value");
     switch (name) {
       case "media":
@@ -543,6 +589,13 @@ class ServerModel with ChangeNotifier {
   void addConnection(Map<String, dynamic> evt) {
     try {
       final client = Client.fromJson(jsonDecode(evt["client"]));
+      if (isAndroid && kAndroidViewerOnly) {
+        bind.cmLoginRes(connId: client.id, res: false);
+        bind.cmCloseConnection(connId: client.id);
+        parent.target?.invokeMethod("cancel_notification", client.id);
+        return;
+      }
+
       if (client.authorized) {
         parent.target?.dialogManager.dismissByTag(getLoginDialogTag(client.id));
         final index = _clients.indexWhere((c) => c.id == client.id);
@@ -616,7 +669,7 @@ class ServerModel with ChangeNotifier {
               ? "View camera"
               : client.isTerminal
                   ? "Terminal"
-                  : "Share screen",
+                  : "Screen connection",
       'Do you accept?',
       'android_new_connection_tip',
       () => sendLoginResponse(client, false),
@@ -625,11 +678,18 @@ class ServerModel with ChangeNotifier {
   }
 
   handleVoiceCall(Client client, bool accept) {
+    if (isAndroid && kAndroidViewerOnly) {
+      bind.cmHandleIncomingVoiceCall(id: client.id, accept: false);
+      return;
+    }
+
     parent.target?.invokeMethod("cancel_notification", client.id);
     bind.cmHandleIncomingVoiceCall(id: client.id, accept: accept);
   }
 
   showVoiceCallDialog(Client client) {
+    if (isAndroid && kAndroidViewerOnly) return;
+
     showClientDialog(
       client,
       'Voice call',
@@ -665,7 +725,7 @@ class ServerModel with ChangeNotifier {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(translate(contentTitle)),
-            ClientInfo(client),
+            _ClientInfo(client),
             Text(
               translate(content),
               style: Theme.of(globalKey.currentContext!).textTheme.bodyMedium,
@@ -693,6 +753,13 @@ class ServerModel with ChangeNotifier {
   }
 
   void sendLoginResponse(Client client, bool res) async {
+    if (isAndroid && kAndroidViewerOnly) {
+      bind.cmLoginRes(connId: client.id, res: false);
+      parent.target?.invokeMethod("cancel_notification", client.id);
+      await bind.cmCloseConnection(connId: client.id);
+      return;
+    }
+
     if (res) {
       bind.cmLoginRes(connId: client.id, res: res);
       if (!client.isFileTransfer && !client.isTerminal) {
@@ -783,6 +850,7 @@ class ServerModel with ChangeNotifier {
   }
 
   void androidUpdatekeepScreenOn() async {
+    if (isAndroid && kAndroidViewerOnly) return;
     if (!isAndroid) return;
     var floatingWindowDisabled =
         bind.mainGetLocalOption(key: kOptionDisableFloatingWindow) == "Y" ||
@@ -909,6 +977,8 @@ String getLoginDialogTag(int id) {
 }
 
 showInputWarnAlert(FFI ffi) {
+  if (isAndroid && kAndroidViewerOnly) return;
+
   ffi.dialogManager.show((setState, close, context) {
     submit() {
       AndroidPermissionManager.startAction(kActionAccessibilitySettings);
@@ -916,7 +986,7 @@ showInputWarnAlert(FFI ffi) {
     }
 
     return CustomAlertDialog(
-      title: Text(translate("How to get Android input permission?")),
+      title: Text(translate("Local input disabled")),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -933,6 +1003,26 @@ showInputWarnAlert(FFI ffi) {
       onCancel: close,
     );
   });
+}
+class _ClientInfo extends StatelessWidget {
+  final Client client;
+
+  const _ClientInfo(this.client);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(client.name, style: const TextStyle(fontSize: 18)),
+          const SizedBox(height: 4),
+          Text(client.peerId, style: const TextStyle(fontSize: 10)),
+        ],
+      ),
+    );
+  }
 }
 
 Future<void> showClientsMayNotBeChangedAlert(FFI? ffi) async {

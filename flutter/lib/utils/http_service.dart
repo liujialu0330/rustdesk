@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_hbb/consts.dart';
+import 'package:deskviewer/consts.dart';
 import 'package:http/http.dart' as http;
 import '../models/platform_model.dart';
-import 'package:flutter_hbb/common.dart';
+import 'package:deskviewer/common.dart';
 export 'package:http/http.dart' show Response;
 
 enum HttpMethod { get, post, put, delete }
@@ -124,3 +124,4 @@ Future<http.Response> delete(Uri url,
   return await HttpService()
       .sendRequest(url, HttpMethod.delete, body: body, headers: headers);
 }
+

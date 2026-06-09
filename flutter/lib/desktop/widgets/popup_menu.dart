@@ -753,3 +753,4 @@ class CustomPopupMenuTheme {
   static const double height = 20.0;
   static const double dividerHeight = 3.0;
 }
+

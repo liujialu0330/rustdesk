@@ -2,10 +2,10 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_hbb/common.dart';
-import 'package:flutter_hbb/desktop/widgets/tabbar_widget.dart';
-import 'package:flutter_hbb/models/model.dart';
-import 'package:flutter_hbb/models/platform_model.dart';
+import 'package:deskviewer/common.dart';
+import 'package:deskviewer/desktop/widgets/tabbar_widget.dart';
+import 'package:deskviewer/models/model.dart';
+import 'package:deskviewer/models/platform_model.dart';
 import 'package:get/get.dart';
 
 const double _kColumn1Width = 30;
@@ -168,8 +168,8 @@ class _PortForwardPageState extends State<PortForwardPage>
                 child: Row(children: [
                   text('Local Port'),
                   const SizedBox(width: _kColumn1Width),
-                  text('Remote Host'),
-                  text('Remote Port'),
+                  text('Target Host'),
+                  text('Target Port'),
                   SizedBox(
                       width: _kColumn4Width, child: Text(translate('Action')))
                 ]),
@@ -315,8 +315,8 @@ class _PortForwardPageState extends State<PortForwardPage>
                 child: Row(children: [
                   text1('Local Port'),
                   const SizedBox(width: _kColumn1Width),
-                  text1('Remote Host'),
-                  text1('Remote Port'),
+                  text1('Target Host'),
+                  text1('Target Port'),
                 ]),
               );
             } else {

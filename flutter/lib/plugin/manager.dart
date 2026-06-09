@@ -129,7 +129,7 @@ class Meta {
 }
 
 class SourceInfo {
-  String name; // 1. RustDesk github 2. Local
+  String name; // 1. Desk Viewer github 2. Local
   String url;
   String description;
 
@@ -317,3 +317,5 @@ class PluginManager with ChangeNotifier {
 }
 
 PluginManager get pluginManager => PluginManager.instance;
+
+

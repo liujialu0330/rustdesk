@@ -2328,3 +2328,4 @@ pub fn has_gnome_shortcuts_inhibitor_permission() -> bool {
         }
     }
 }
+

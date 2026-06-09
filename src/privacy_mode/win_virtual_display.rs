@@ -584,3 +584,4 @@ pub fn restore_reg_connectivity(plug_out_monitors: bool, force: bool) {
     }
     reset_config_reg_connectivity();
 }
+

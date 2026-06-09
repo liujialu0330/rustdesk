@@ -217,3 +217,4 @@ fn session_rgba_cb(id: String, rgb: &mut scrap::ImageRgb) {
 pub fn session_register_event_stream(id: String, stream: StreamSink<EventToUI>) {
     SESSION_HANDLER.session_register_event_stream(id, stream);
 }
+

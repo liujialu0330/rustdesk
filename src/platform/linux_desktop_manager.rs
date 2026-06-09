@@ -806,3 +806,4 @@ fn pam_get_service_name() -> String {
         "gdm".to_owned()
     }
 }
+

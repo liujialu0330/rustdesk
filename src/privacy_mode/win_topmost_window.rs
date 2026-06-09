@@ -381,3 +381,4 @@ pub(super) fn wait_find_privacy_hwnd(msecs: u128) -> ResultType<HWND> {
         std::thread::sleep(Duration::from_millis(100));
     }
 }
+

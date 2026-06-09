@@ -56,3 +56,6 @@ vcpkg_installed
 flutter/lib/generated_plugin_registrant.dart
 libsciter.dylib
 flutter/web/
+# Local APK inspection dumps and build logs (not for VCS)
+apk-inspect-*/
+/logs/
