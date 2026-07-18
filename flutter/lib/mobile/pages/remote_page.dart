@@ -9,7 +9,6 @@ import 'package:deskviewer/mobile/widgets/floating_mouse.dart';
 import 'package:deskviewer/mobile/widgets/floating_mouse_widgets.dart';
 import 'package:deskviewer/mobile/widgets/gesture_help.dart';
 import 'package:deskviewer/models/chat_model.dart';
-import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
@@ -70,8 +69,15 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
 
   final _blockableOverlayState = BlockableOverlayState();
 
-  final keyboardVisibilityController = KeyboardVisibilityController();
-  late final StreamSubscription<bool> keyboardSubscription;
+  // Soft keyboard state derived from the engine IME inset (viewInsets.bottom)
+  // in didChangeMetrics. flutter_keyboard_visibility compares the visible
+  // frame against the full screen with a 0.85 ratio, which deadlocks in
+  // landscape: with system bars shown the ratio stays below the threshold
+  // after the IME is gone, so its "hidden" event never fires. viewInsets only
+  // tracks the IME and is unaffected by system bar visibility.
+  bool _keyboardVisible = false;
+  Timer? _keyboardMetricsDebounce;
+  Timer? _canvasRestoreTimer;
   final FocusNode _mobileFocusNode = FocusNode();
   final FocusNode _physicalFocusNode = FocusNode();
   var _showEdit = false; // use soft keyboard
@@ -117,8 +123,6 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
     _physicalFocusNode.requestFocus();
     gFFI.inputModel.listenToMouse(true);
     gFFI.qualityMonitorModel.checkShowQualityMonitor(sessionId);
-    keyboardSubscription =
-        keyboardVisibilityController.onChange.listen(onSoftKeyboardChanged);
     gFFI.chatModel
         .changeCurrentKey(MessageKey(widget.id, ChatModel.clientModeID));
     _blockableOverlayState.applyFfi(gFFI);
@@ -128,8 +132,7 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
       if (gFFI.recordingModel.start) {
         showToast(translate('Automatically record outgoing sessions'));
       }
-      _disableAndroidSoftKeyboard(
-          isKeyboardVisible: keyboardVisibilityController.isVisible);
+      _disableAndroidSoftKeyboard(isKeyboardVisible: _keyboardVisible);
     });
     WidgetsBinding.instance.addObserver(this);
 
@@ -173,13 +176,14 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
     inputModel.keyboardInputAllowed = true;
     await gFFI.close();
     _timer?.cancel();
+    _keyboardMetricsDebounce?.cancel();
+    _canvasRestoreTimer?.cancel();
     _iosKeyboardWorkaroundTimer?.cancel();
     gFFI.dialogManager.dismissAll();
     await SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
         overlays: SystemUiOverlay.values);
     await SystemChrome.setPreferredOrientations(const []);
     WakelockManager.disable(_uniqueKey);
-    await keyboardSubscription.cancel();
     removeSharedStates(widget.id);
     // `on_voice_call_closed` should be called when the connection is ended.
     // The inner logic of `on_voice_call_closed` will check if the voice call is active.
@@ -247,39 +251,88 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
         ),
       );
 
-  void onSoftKeyboardChanged(bool visible) {
-    if (!visible) {
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: []);
-      // [pi.version.isNotEmpty] -> check ready or not, avoid login without soft-keyboard
-      if (gFFI.chatModel.chatWindowOverlayEntry == null &&
-          gFFI.ffiModel.pi.version.isNotEmpty) {
-        gFFI.invokeMethod("enable_soft_keyboard", false);
-      }
+  @override
+  void didChangeMetrics() {
+    super.didChangeMetrics();
+    // The IME animation reports metrics every frame; debounce and act on the
+    // settled value only. System bar changes do not touch viewInsets, so this
+    // cannot re-enter itself through the overlay switches below.
+    _keyboardMetricsDebounce?.cancel();
+    _keyboardMetricsDebounce = Timer(const Duration(milliseconds: 30), () {
+      if (!mounted) return;
+      final inset =
+          MediaQueryData.fromView(View.of(context)).viewInsets.bottom;
+      final visible = inset > 1;
+      if (visible == _keyboardVisible) return;
+      _keyboardVisible = visible;
+      visible ? _onSoftKeyboardShown() : _onSoftKeyboardHidden();
+    });
+  }
 
-      // Workaround for iOS: physical keyboard input fails after virtual keyboard is hidden
-      // https://github.com/flutter/flutter/issues/39900
-      // https://github.com/liujialu0330/deskviewer/discussions/11843#discussioncomment-13499698 - Virtual keyboard issue
-      if (isIOS) {
-        _iosKeyboardWorkaroundTimer?.cancel();
-        _iosKeyboardWorkaroundTimer = Timer(Duration(milliseconds: 100), () {
-          if (!mounted) return;
-          _physicalFocusNode.unfocus();
-          _iosKeyboardWorkaroundTimer = Timer(Duration(milliseconds: 50), () {
-            if (!mounted) return;
-            _physicalFocusNode.requestFocus();
-          });
-        });
-      }
-    } else {
-      _iosKeyboardWorkaroundTimer?.cancel();
-      _iosKeyboardWorkaroundTimer = null;
+  void _onSoftKeyboardHidden() {
+    if (_showEdit) {
+      // The keyboard was dismissed outside our UI (e.g. system back).
+      // Tear the hidden edit field down as well, otherwise it keeps focus
+      // and re-summons the IME on the next relayout.
       _timer?.cancel();
-      _timer = Timer(kMobileDelaySoftKeyboardFocus, () {
-        SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
-            overlays: SystemUiOverlay.values);
-        _mobileFocusNode.requestFocus();
+      _showEdit = false;
+      _mobileFocusNode.unfocus();
+      _physicalFocusNode.requestFocus();
+    }
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: []);
+    // Release the canvas from its keyboard layout: flip the model state so
+    // getSize()/getAdjustY() stop reserving space for the key-help bar, and
+    // restore the offset/scale saved when the keyboard appeared.
+    gFFI.cursorModel.keyHelpToolsVisibilityChanged(null, false);
+    // [pi.version.isNotEmpty] -> check ready or not, avoid login without soft-keyboard
+    if (gFFI.chatModel.chatWindowOverlayEntry == null &&
+        gFFI.ffiModel.pi.version.isNotEmpty) {
+      gFFI.invokeMethod("enable_soft_keyboard", false);
+    }
+    // Recompute the view style once the bar-hide animation settles, so a
+    // scale computed against the keyboard-shrunken viewport does not stick
+    // across sessions. Skip when the user has panned/zoomed manually.
+    _canvasRestoreTimer?.cancel();
+    _canvasRestoreTimer = Timer(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+      if (!gFFI.canvasModel.isMobileCanvasChanged) {
+        gFFI.canvasModel.updateViewStyle();
+      }
+    });
+
+    // Workaround for iOS: physical keyboard input fails after virtual keyboard is hidden
+    // https://github.com/flutter/flutter/issues/39900
+    // https://github.com/liujialu0330/deskviewer/discussions/11843#discussioncomment-13499698 - Virtual keyboard issue
+    if (isIOS) {
+      _iosKeyboardWorkaroundTimer?.cancel();
+      _iosKeyboardWorkaroundTimer = Timer(Duration(milliseconds: 100), () {
+        if (!mounted) return;
+        _physicalFocusNode.unfocus();
+        _iosKeyboardWorkaroundTimer = Timer(Duration(milliseconds: 50), () {
+          if (!mounted) return;
+          _physicalFocusNode.requestFocus();
+        });
       });
     }
+    // update for Scaffold
+    setState(() {});
+  }
+
+  void _onSoftKeyboardShown() {
+    _canvasRestoreTimer?.cancel();
+    _iosKeyboardWorkaroundTimer?.cancel();
+    _iosKeyboardWorkaroundTimer = null;
+    _timer?.cancel();
+    _timer = Timer(kMobileDelaySoftKeyboardFocus, () {
+      if (!mounted) return;
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
+          overlays: SystemUiOverlay.values);
+      // Only pull focus back for the in-session edit field; refocusing
+      // unconditionally restarts the show/hide oscillation after a close.
+      if (_showEdit) {
+        _mobileFocusNode.requestFocus();
+      }
+    });
     // update for Scaffold
     setState(() {});
   }
@@ -430,16 +483,40 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
     setState(() => _showEdit = false);
     _timer?.cancel();
     _timer = Timer(kMobileDelaySoftKeyboard, () {
+      if (!mounted) return;
       // show now, and sleep a while to requestFocus to
       // make sure edit ready, so that keyboard won't show/hide/show/hide happen
       setState(() => _showEdit = true);
       _timer?.cancel();
       _timer = Timer(kMobileDelaySoftKeyboardFocus, () {
+        if (!mounted) return;
         SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
             overlays: SystemUiOverlay.values);
         _mobileFocusNode.requestFocus();
       });
     });
+  }
+
+  // Full teardown of the in-session soft keyboard. Destroying the hidden
+  // edit field (not just hiding the IME) is required: a still-focused
+  // TextFormField re-summons the keyboard on the next relayout, making it
+  // impossible to dismiss (upstream rustdesk#14286).
+  void _closeKeyboard() {
+    _timer?.cancel();
+    setState(() => _showEdit = false);
+    if (gFFI.chatModel.chatWindowOverlayEntry == null) {
+      gFFI.invokeMethod("enable_soft_keyboard", false);
+    }
+    _mobileFocusNode.unfocus();
+    _physicalFocusNode.requestFocus();
+  }
+
+  void _toggleKeyboard() {
+    if (_showEdit) {
+      _closeKeyboard();
+    } else {
+      openKeyboard();
+    }
   }
 
   Widget _bottomWidget() => _showGestureHelp
@@ -452,8 +529,7 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    final keyboardIsVisible =
-        keyboardVisibilityController.isVisible && _showEdit;
+    final keyboardIsVisible = _keyboardVisible && _showEdit;
     final showActionButton = !_showBar || keyboardIsVisible || _showGestureHelp;
 
     return WillPopScope(
@@ -478,18 +554,13 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
                   ),
                   backgroundColor: MyTheme.accent,
                   onPressed: () {
-                    setState(() {
-                      if (keyboardIsVisible) {
-                        _showEdit = false;
-                        gFFI.invokeMethod("enable_soft_keyboard", false);
-                        _mobileFocusNode.unfocus();
-                        _physicalFocusNode.requestFocus();
-                      } else if (_showGestureHelp) {
-                        _showGestureHelp = false;
-                      } else {
-                        _showBar = !_showBar;
-                      }
-                    });
+                    if (keyboardIsVisible) {
+                      _closeKeyboard();
+                    } else if (_showGestureHelp) {
+                      setState(() => _showGestureHelp = false);
+                    } else {
+                      setState(() => _showBar = !_showBar);
+                    }
                   }),
           bottomNavigationBar: Obx(() => Stack(
                 alignment: Alignment.bottomCenter,
@@ -619,8 +690,9 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
                 ? [
                     IconButton(
                         color: Colors.white,
-                        icon: Icon(Icons.keyboard),
-                        onPressed: openKeyboard),
+                        icon: Icon(
+                            _showEdit ? Icons.keyboard_hide : Icons.keyboard),
+                        onPressed: _toggleKeyboard),
                     IconButton(
                       color: Colors.white,
                       icon: const Icon(Icons.build),
@@ -631,8 +703,9 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
                 : [
                     IconButton(
                         color: Colors.white,
-                        icon: Icon(Icons.keyboard),
-                        onPressed: openKeyboard),
+                        icon: Icon(
+                            _showEdit ? Icons.keyboard_hide : Icons.keyboard),
+                        onPressed: _toggleKeyboard),
                     IconButton(
                       color: Colors.white,
                       icon: Icon(gFFI.ffiModel.touchMode
@@ -731,7 +804,7 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
       !gFFI.inputModel.relativeMouseMode.value;
 
   Widget getBodyForMobile() {
-    final keyboardIsVisible = keyboardVisibilityController.isVisible;
+    final keyboardIsVisible = _keyboardVisible && _showEdit;
     return Container(
         color: MyTheme.canvasColor,
         child: Stack(children: () {
@@ -1009,7 +1082,6 @@ class _KeyHelpToolsState extends State<KeyHelpTools> {
   var _more = true;
   var _fn = false;
   var _pin = false;
-  final _keyboardVisibilityController = KeyboardVisibilityController();
   final _key = GlobalKey();
 
   InputModel get inputModel => gFFI.inputModel;
@@ -1201,7 +1273,7 @@ class _KeyHelpToolsState extends State<KeyHelpTools> {
         key: _key,
         color: Color(0xAA000000),
         padding: EdgeInsets.only(
-            top: _keyboardVisibilityController.isVisible ? 24 : 4, bottom: 8),
+            top: widget.keyboardIsVisible ? 24 : 4, bottom: 8),
         child: Wrap(
           spacing: space,
           runSpacing: space,
